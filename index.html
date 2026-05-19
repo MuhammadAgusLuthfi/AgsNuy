@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0">
+    <title>Our Love Fund - Mobile Responsive</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #fff5f7; color: #4a1d24; -webkit-tap-highlight-color: transparent; }
+        .glass { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); border: 1px solid rgba(255, 77, 109, 0.1); }
+        
+        /* LOGIN OVERLAY */
+        #login-overlay { position: fixed; inset: 0; background: #fff5f7; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+
+        /* HEART ANIMATION - RESPONSIVE SIZE */
+        .heart-container { position: relative; width: 160px; height: 145px; margin: 0 auto; filter: drop-shadow(0 10px 20px rgba(255, 77, 109, 0.2)); }
+        @media (min-width: 768px) { .heart-container { width: 200px; height: 180px; } }
+
+        .heart-svg { width: 100%; height: 100%; fill: #f8fafc; position: absolute; z-index: 10; }
+        .liquid-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; clip-path: url(#heart-mask); z-index: 5; }
+        .water { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: linear-gradient(to top, #ff0a54, #ff4d6d); transition: height 1.5s cubic-bezier(0.4, 0, 0.2, 1), background 1.5s ease; }
+        .water::before { content: ""; position: absolute; width: 200%; height: 200%; top: -15%; left: -50%; background: rgba(255, 255, 255, 0.3); border-radius: 38%; animation: wave 6s linear infinite; }
+        
+        @keyframes wave { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .heart-beat { animation: heartPulse 2.5s infinite ease-in-out; }
+        @keyframes heartPulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+
+        .loader-overlay { position: fixed; inset: 0; background: rgba(255, 245, 247, 0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1100; backdrop-filter: blur(5px); }
+        .pink-gradient { background: linear-gradient(135deg, #ff4d6d 0%, #ff0a54 100%); }
+        #main-content { display: none; }
+    </style>
+</head>
+<body class="pb-10">
+
+    <!-- LOGIN SCREEN -->
+    <div id="login-overlay">
+        <div class="glass p-8 md:p-10 rounded-[2.5rem] shadow-2xl text-center max-w-[320px] md:max-w-sm w-full mx-4">
+            <div class="text-4xl mb-4 animate__animated animate__heartBeat animate__infinite">🔒</div>
+            <h2 class="text-xl md:text-2xl font-black text-pink-600 mb-2">Private Access</h2>
+            <p class="text-pink-300 text-xs md:text-sm mb-6 font-medium">Masukkan password keamanan</p>
+            <input type="password" id="pw-input" placeholder="Password..." class="w-full p-4 rounded-2xl bg-pink-50 border-none outline-none ring-2 ring-pink-100 focus:ring-pink-400 mb-4 text-center font-bold">
+            <button onclick="checkPassword()" class="w-full pink-gradient text-white font-bold py-4 rounded-2xl shadow-lg active:scale-95 transition-all">Buka ✨</button>
+            <p id="pw-error" class="text-red-400 text-xs mt-4 font-bold hidden">Password salah! ❌</p>
+        </div>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main-content">
+        <div id="loader" class="loader-overlay">
+            <div class="w-10 h-10 border-4 border-pink-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="font-bold text-pink-600 text-xs tracking-widest uppercase">Syncing Cloud...</p>
+        </div>
+
+        <!-- MODAL EDIT -->
+        <div id="editModal" class="fixed inset-0 z-[1200] hidden flex items-center justify-center p-4 bg-pink-900/30 backdrop-blur-sm">
+            <div class="glass w-full max-w-sm rounded-[2rem] p-6 md:p-8 shadow-2xl animate__animated animate__zoomIn">
+                <h3 class="text-lg font-bold mb-4 text-pink-600">Ubah Catatan Cinta ✏️</h3>
+                <div class="space-y-3">
+                    <input type="hidden" id="editId">
+                    <select id="editWho" class="w-full bg-pink-50 border-none rounded-xl p-3 outline-none ring-1 ring-pink-100 text-sm">
+                        <option value="p1">Luthfi</option>
+                        <option value="p2">Nurul</option>
+                    </select>
+                    <input type="number" id="editAmount" class="w-full bg-pink-50 border-none rounded-xl p-3 outline-none ring-1 ring-pink-100 font-bold text-sm">
+                    <input type="text" id="editDesc" class="w-full bg-pink-50 border-none rounded-xl p-3 outline-none ring-1 ring-pink-100 text-sm">
+                    <div class="flex gap-2 pt-2">
+                        <button onclick="closeModal()" class="flex-1 py-3 text-sm font-bold text-pink-300">Batal</button>
+                        <button onclick="saveEdit()" class="flex-1 pink-gradient text-white py-3 rounded-xl text-sm font-bold shadow-lg">Simpan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="max-w-4xl mx-auto px-4 pt-8 md:pt-12">
+            <header class="text-center mb-6 md:mb-10">
+                <h1 class="text-2xl md:text-4xl font-black text-pink-600 tracking-tight mb-1 uppercase italic">Our Pink Fund 💖</h1>
+                <p class="text-pink-300 font-medium tracking-widest text-[10px] md:text-xs uppercase italic">Google Cloud Synchronized</p>
+            </header>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
+                <div class="lg:col-span-2 space-y-6 md:y-8">
+                    <!-- MAIN CARD -->
+                    <div class="glass rounded-[2rem] md:rounded-[3rem] p-6 md:p-12 shadow-xl text-center relative overflow-hidden border-none">
+                        <div class="heart-container heart-beat mb-6 md:mb-8">
+                            <svg class="heart-svg" viewBox="0 0 32 29.6">
+                                <defs><clipPath id="heart-mask"><path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,16,21.2,16,21.2s16-11.8,16-21.2C32,3.8,28.2,0,23.6,0z"/></clipPath></defs>
+                                <path d="M23.6,0c-3.4,0-6.3,2.7-7.6,5.6C14.7,2.7,11.8,0,8.4,0C3.8,0,0,3.8,0,8.4c0,9.4,16,21.2,16,21.2s16-11.8,16-21.2C32,3.8,28.2,0,23.6,0z" fill="#fceef2" />
+                            </svg>
+                            <div class="liquid-container"><div id="water-fill" class="water"></div></div>
+                            <div class="absolute inset-0 flex items-center justify-center z-20"><span id="percent-text" class="text-2xl md:text-3xl font-black text-pink-900">0%</span></div>
+                        </div>
+                        <p class="text-pink-300 text-[10px] font-bold uppercase tracking-[0.2em] mb-1">Total Tabungan</p>
+                        <p id="total-balance" class="text-3xl sm:text-4xl md:text-6xl font-black text-pink-600 tracking-tighter mb-4 md:mb-6 leading-none">Rp 0</p>
+                        <div class="inline-block px-5 py-2 rounded-xl bg-pink-50 text-pink-500 font-bold text-[10px] md:text-sm">Target: Rp 10.000.000</div>
+                    </div>
+
+                    <!-- PARTNER INFO -->
+                    <div class="grid grid-cols-2 gap-4 md:gap-6">
+                        <div class="glass rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 text-center border-b-4 border-pink-200">
+                            <p class="text-[9px] md:text-[10px] font-black text-pink-300 uppercase mb-1">Luthfi</p>
+                            <p id="p1-total" class="text-base md:text-2xl font-black text-pink-600 truncate">Rp 0</p>
+                        </div>
+                        <div class="glass rounded-[1.5rem] md:rounded-[2rem] p-4 md:p-6 text-center border-b-4 border-pink-200">
+                            <p class="text-[9px] md:text-[10px] font-black text-pink-300 uppercase mb-1">Nurul</p>
+                            <p id="p2-total" class="text-base md:text-2xl font-black text-pink-600 truncate">Rp 0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- FORM INPUT -->
+                <div class="space-y-6 lg:animate__animated lg:animate__fadeInRight">
+                    <div class="glass rounded-[2rem] p-6 md:p-8 shadow-xl border-none">
+                        <h3 class="font-bold text-lg mb-4 text-pink-600">Isi Brankas 🍬</h3>
+                        <div class="space-y-3">
+                            <select id="contributor" class="w-full bg-pink-50 border-none rounded-xl p-3 md:p-4 outline-none ring-2 ring-pink-100 focus:ring-pink-400 text-sm">
+                                <option value="p1">Luthfi</option>
+                                <option value="p2">Nurul</option>
+                            </select>
+                            <input type="number" id="amount" placeholder="Nominal Rp" class="w-full bg-pink-50 border-none rounded-xl p-3 md:p-4 outline-none ring-2 ring-pink-100 focus:ring-pink-400 font-bold text-sm">
+                            <input type="text" id="desc" placeholder="Untuk apa?" class="w-full bg-pink-50 border-none rounded-xl p-3 md:p-4 outline-none ring-2 ring-pink-100 focus:ring-pink-400 text-sm">
+                            <button onclick="addEntry()" class="w-full pink-gradient text-white font-bold py-4 md:py-5 rounded-xl shadow-lg active:scale-95 transition-all text-sm md:text-base">Simpan ke Cloud</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- HISTORY LIST -->
+            <div class="mt-8 md:mt-12 bg-white/60 rounded-[2rem] md:rounded-[3rem] shadow-xl overflow-hidden">
+                <div class="p-6 md:p-8 border-b border-pink-50 flex justify-between items-center">
+                    <h3 class="font-bold text-base md:text-xl text-pink-600">Riwayat Cinta</h3>
+                    <button onclick="resetCloud()" class="text-[9px] font-bold text-pink-300 hover:text-red-400 transition-colors uppercase tracking-widest">Reset</button>
+                </div>
+                <div id="history-list" class="divide-y divide-pink-50 max-h-[400px] overflow-y-auto">
+                    <!-- Data will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 1. SETTINGS
+        const MY_PASSWORD = "7E"; // GANTI PASSWORD DISINI
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxz6N_BsN4HVYKVIw5wqhfGIBVLnuYYOWUvy74dUjy923nwxse6kJbR_05d-HnsMmpj/exec";
+        const GOAL = 10000000;
+
+        let cloudHistory = [];
+
+        // 2. AUTH LOGIC
+        function checkPassword() {
+            const input = document.getElementById('pw-input').value;
+            if (input === MY_PASSWORD) {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                unlockApp();
+            } else {
+                document.getElementById('pw-error').classList.remove('hidden');
+                document.getElementById('pw-input').value = '';
+                const box = document.querySelector('#login-overlay .glass');
+                box.classList.add('animate__animated', 'animate__shakeX');
+                setTimeout(() => box.classList.remove('animate__shakeX'), 500);
+            }
+        }
+
+        function unlockApp() {
+            document.getElementById('login-overlay').style.display = 'none';
+            document.getElementById('main-content').style.display = 'block';
+            fetchFromCloud();
+        }
+
+        window.onload = () => { if (sessionStorage.getItem('isLoggedIn') === 'true') unlockApp(); };
+
+        // 3. CLOUD LOGIC
+        async function fetchFromCloud() {
+            showLoader(true);
+            try {
+                const response = await fetch(SCRIPT_URL);
+                cloudHistory = await response.json();
+                updateUI();
+            } catch (e) { console.error(e); }
+            showLoader(false);
+        }
+
+        async function addEntry() {
+            const who = document.getElementById('contributor').value;
+            const amount = parseInt(document.getElementById('amount').value);
+            const desc = document.getElementById('desc').value || "Tabungan";
+            if (!amount) return;
+
+            showLoader(true);
+            const dateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+            
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'add', who, amount, desc, date: dateStr })
+                });
+                await fetchFromCloud();
+                confetti({ particleCount: 100, spread: 50, origin: { y: 0.8 }, colors: ['#ff0a54', '#ff4d6d'] });
+                document.getElementById('amount').value = '';
+                document.getElementById('desc').value = '';
+            } catch (e) { alert("Gagal Simpan!"); }
+            showLoader(false);
+        }
+
+        function openEditModal(idx) {
+            const item = cloudHistory[idx];
+            document.getElementById('editId').value = item.id;
+            document.getElementById('editWho').value = item.who;
+            document.getElementById('editAmount').value = item.amount;
+            document.getElementById('editDesc').value = item.desc;
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+
+        async function saveEdit() {
+            const id = parseInt(document.getElementById('editId').value);
+            const who = document.getElementById('editWho').value;
+            const amount = parseInt(document.getElementById('editAmount').value);
+            const desc = document.getElementById('editDesc').value;
+            const dateStr = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'short' });
+
+            showLoader(true);
+            try {
+                await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ action: 'edit', id, who, amount, desc, date: dateStr })
+                });
+                closeModal();
+                await fetchFromCloud();
+            } catch (e) { alert("Gagal Update!"); }
+            showLoader(false);
+        }
+
+        async function deleteEntry(id) {
+            if(!confirm("Hapus data ini?")) return;
+            showLoader(true);
+            try {
+                await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'delete', id }) });
+                await fetchFromCloud();
+            } catch (e) { alert("Gagal Hapus!"); }
+            showLoader(false);
+        }
+
+        async function resetCloud() {
+            if(!confirm("Reset seluruh data di Google Sheets?")) return;
+            showLoader(true);
+            await fetch(SCRIPT_URL, { method: 'POST', body: JSON.stringify({ action: 'clear' }) });
+            await fetchFromCloud();
+            showLoader(false);
+        }
+
+        function updateUI() {
+            const totals = { p1: 0, p2: 0, total: 0 };
+            const list = document.getElementById('history-list');
+            list.innerHTML = '';
+
+            cloudHistory.slice().reverse().forEach((item, index) => {
+                const actualIdx = cloudHistory.length - 1 - index;
+                const amt = parseInt(item.amount);
+                totals[item.who] += amt;
+                totals.total += amt;
+
+                const div = document.createElement('div');
+                div.className = "p-4 md:p-6 flex justify-between items-center bg-white/40";
+                div.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center bg-pink-100 text-pink-500 font-bold text-[10px] md:text-xs uppercase">${item.who}</div>
+                        <div>
+                            <p class="font-bold text-[11px] md:text-sm text-slate-700 truncate max-w-[100px] md:max-w-xs">${item.desc}</p>
+                            <p class="text-[9px] text-pink-300 uppercase">${item.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <p class="font-black text-pink-500 text-xs md:text-base">+${formatShort(amt)}</p>
+                        <div class="flex gap-2">
+                            <button onclick="openEditModal(${actualIdx})" class="p-1 text-pink-200"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg></button>
+                            <button onclick="deleteEntry(${item.id})" class="p-1 text-pink-100"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg></button>
+                        </div>
+                    </div>
+                `;
+                list.appendChild(div);
+            });
+
+            const percent = Math.min((totals.total / GOAL) * 100, 100).toFixed(0);
+            document.getElementById('total-balance').innerText = formatRupiah(totals.total);
+            document.getElementById('p1-total').innerText = formatShort(totals.p1);
+            document.getElementById('p2-total').innerText = formatShort(totals.p2);
+            document.getElementById('percent-text').innerText = percent + '%';
+            document.getElementById('water-fill').style.height = percent + '%';
+            
+            const sat = 60 + (percent * 0.3), light = 85 - (percent * 0.4);
+            document.getElementById('water-fill').style.background = `linear-gradient(to top, hsl(340, ${sat}%, ${light - 10}%), hsl(340, ${sat}%, ${light}%))`;
+        }
+
+        // HELPERS
+        function closeModal() { document.getElementById('editModal').classList.add('hidden'); }
+        function showLoader(show) { document.getElementById('loader').style.display = show ? 'flex' : 'none'; }
+        function formatRupiah(num) { return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num); }
+        function formatShort(num) {
+            if (num >= 1000000) return (num / 1000000).toFixed(1) + 'jt';
+            if (num >= 1000) return (num / 1000).toFixed(0) + 'rb';
+            return num;
+        }
+    </script>
+</body>
+</html>
